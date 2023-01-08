@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.23 (MiKTeX 21.8) (preloaded format=pdflatex 2021.12.1)  8 JAN 2023 11:01
+This is pdfTeX, Version 3.141592653-2.6-1.40.23 (MiKTeX 21.8) (preloaded format=pdflatex 2021.12.1)  8 JAN 2023 15:06
 entering extended mode
 **"./Pressurized fracture.tex"
 (Pressurized fracture.tex
@@ -563,7 +563,7 @@ LaTeX Info: Redefining \BHBI on input line 130.
 ) [1
 
 {C:/Users/alexi/AppData/Local/MiKTeX/pdftex/config/pdftex.map}]
-<fracture.png, id=72, 342.65013pt x 241.20113pt>
+<fracture.png, id=76, 342.65013pt x 241.20113pt>
 File: fracture.png Graphic file (type png)
 <use fracture.png>
 Package pdftex.def Info: fracture.png  used on input line 95.
@@ -574,23 +574,23 @@ been already used, duplicate ignored
                    \relax 
 l.109 
        [1 <./fracture.png>] [2]
-<fracture_boundaries.png, id=104, 188.98605pt x 190.34111pt>
+<fracture_boundaries.png, id=108, 188.98605pt x 190.34111pt>
 File: fracture_boundaries.png Graphic file (type png)
 <use fracture_boundaries.png>
 Package pdftex.def Info: fracture_boundaries.png  used on input line 215.
 (pdftex.def)             Requested size: 258.75pt x 260.62633pt.
  [3 <./fracture_boundaries.png>]
-<../figures/mesh.pdf, id=114, 503.34708pt x 250.05414pt>
+<../figures/mesh.pdf, id=118, 615.36559pt x 333.95581pt>
 File: ../figures/mesh.pdf Graphic file (type pdf)
 <use ../figures/mesh.pdf>
 Package pdftex.def Info: ../figures/mesh.pdf  used on input line 224.
-(pdftex.def)             Requested size: 345.0pt x 171.38905pt.
+(pdftex.def)             Requested size: 345.0pt x 187.2331pt.
 
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 [4 <../figures/mesh.pdf>] [5]
-<../figures/undrained.pdf, id=161, 650.22588pt x 319.20337pt>
+<../figures/undrained.pdf, id=163, 650.22588pt x 319.20337pt>
 File: ../figures/undrained.pdf Graphic file (type pdf)
 <use ../figures/undrained.pdf>
 Package pdftex.def Info: ../figures/undrained.pdf  used on input line 303.
@@ -600,7 +600,7 @@ Package pdftex.def Info: ../figures/undrained.pdf  used on input line 303.
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 [6]
-<../figures/drained.pdf, id=172, 655.30135pt x 320.06766pt>
+<../figures/drained.pdf, id=174, 655.30135pt x 320.06766pt>
 File: ../figures/drained.pdf Graphic file (type pdf)
 <use ../figures/drained.pdf>
 Package pdftex.def Info: ../figures/drained.pdf  used on input line 315.
@@ -609,33 +609,29 @@ Package pdftex.def Info: ../figures/drained.pdf  used on input line 315.
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-[7 <../figures/undrained.pdf>]
-<../figures/time_behavior.pdf, id=221, 570.5754pt x 439.6425pt>
+[7 <../figures/undrained.pdf>] [8 <../figures/drained.pdf>]
+<../figures/time_behavior.pdf, id=293, 570.5754pt x 439.6425pt>
 File: ../figures/time_behavior.pdf Graphic file (type pdf)
 <use ../figures/time_behavior.pdf>
 Package pdftex.def Info: ../figures/time_behavior.pdf  used on input line 327.
 (pdftex.def)             Requested size: 345.0pt x 265.83359pt.
-
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-[8 <../figures/drained.pdf>] [9 <../figures/time_behavior.pdf>]
-(Pressurized fracture.bbl) [10] (Pressurized fracture.aux)
+ [9 <../figures/time_behavior.pdf>] [10] (Pressurized fracture.bbl) [11] (Press
+urized fracture.aux)
 
 LaTeX Warning: There were multiply-defined labels.
 
 Package rerunfilecheck Info: File `"Pressurized fracture".out' has not changed.
 
-(rerunfilecheck)             Checksum: B7002DE9B9A2D82844B3CF6460C25DE3;2490.
+(rerunfilecheck)             Checksum: 5FD71FF33FFBA526B5F50E8D94A38718;2667.
  ) 
 Here is how much of TeX's memory you used:
- 12670 strings out of 478927
- 188772 string characters out of 2852535
+ 12673 strings out of 478927
+ 188823 string characters out of 2852535
  532366 words of memory out of 3000000
- 30307 multiletter control sequences out of 15000+600000
+ 30308 multiletter control sequences out of 15000+600000
  407476 words of font info for 41 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 63i,10n,89p,1587b,356s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 63i,10n,89p,1916b,410s stack positions out of 5000i,500n,10000p,200000b,80000s
 {C:/Users/alexi/AppData/Roaming/MiKTeX/fonts/enc/dvips/cm-super/cm-super-ts1.
 enc}<C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/c
 m/cmbx10.pfb><C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/type1/public/a
@@ -660,9 +656,9 @@ exi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmti10.pfb><C:
 /Users/alexi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt1
 0.pfb><C:/Users/alexi/AppData/Roaming/MiKTeX/fonts/type1/public/cm-super/sfrm10
 00.pfb>
-Output written on "Pressurized fracture.pdf" (11 pages, 667546 bytes).
+Output written on "Pressurized fracture.pdf" (12 pages, 680643 bytes).
 PDF statistics:
- 435 PDF objects out of 1000 (max. 8388607)
- 44 named destinations out of 1000 (max. 500000)
- 151 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 444 PDF objects out of 1000 (max. 8388607)
+ 46 named destinations out of 1000 (max. 500000)
+ 159 words of extra memory for PDF output out of 10000 (max. 10000000)
 
