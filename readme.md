@@ -2,7 +2,11 @@
 
 Modelling the development of a pressurized, non-propagating fracture in homogenous media with finite elements. Made as a final project for the course Computational geomechanics. The file ```report/Pressurized fracture.pdf``` contains a short synthesis of the work done and the mathematical development.
 
+<<<<<<< HEAD
 ![alt text](Figures/fracture_opening.gif)
+=======
+![alt text](../Figures/fracture_opening.gif)
+>>>>>>> 5646bb7ff2d6baf93b088d561e70b3dea0262268
 
 The python code in the FEM folder is translated from Matlab code developped by the [Geo-Energy Lab](https://www.epfl.ch/labs/gel/fr/index-fr-html/), based at the École Polytechnique Fédérale de Lausanne, [accessible here](https://github.com/GeoEnergyLab-EPFL/Civil-423-2022/tree/week_9_tag).
 
