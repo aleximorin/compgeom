@@ -88,7 +88,7 @@
 % do not change the different sections
 
 \section{Problem introduction}
-We are interested in the evolution of a pressurized fracture in a rock. A typical configuration of this problem would involve a wellbore in which a fluid is injected with the goal of causing the propagation of fractures in the medium (figure \ref{fig:conceptual}). 
+We are interested in the evolution of a pressurized fracture in rock. A typical configuration of this problem would involve a wellbore in which a fluid is injected with the goal of causing the propagation of fractures in the medium (figure \ref{fig:conceptual}). 
 
 \begin{figure}[h]
     \centering
@@ -270,7 +270,7 @@ We can build normalization factors to try and generalize the results, independen
 \epsilon = \frac{2c(1 - \sigma^2) \, p_{\text{frac}}}{\mathrm{E}} \dot{=} [\mathrm{L}].
 \label{eq:eps}
 \end{equation}
-We can then normalize the resulting displacements $u_y$ by $\epsilon$, plotting the normalized displacements $u_y/\epsilon$ as a function of distance from crack length $c$, $x/c$. We also need to normalize the stresses. Once again following \citeA{sneddon1946distribution}, this is easily done by dividing the computed stresses by $p_{\text{frac}}$. Finally, the problem shows a temporal evolution component and we will need to normalize the results relative to this variable. The parameters related to the diffusion of fluid through the medium are the principal contributors controlling the the time-dependent behavior of the phenomenon. Since the hydraulic conductivity K has dimensions of $\mathrm{L}\,\mathrm{T}^{-1}$, we can normalize the time $t$ by multiplying it by a new coefficient
+We can then normalize the resulting displacements $u_y$ by $\epsilon$, plotting the normalized displacements $u_y/\epsilon$ as a function of distance from crack length $c$, $x/c$. We also need to normalize the stresses. This is easily done by once again following \citeA{sneddon1946distribution}, where we can divide the computed stress by $p_{\text{frac}}$. Finally, the problem shows a temporal evolution component and we will need to normalize the results relative to this variable. The parameters related to the diffusion of fluid through the medium are the principal contributors controlling the the time-dependent behavior of the phenomenon. Since the hydraulic conductivity K has dimensions of $\mathrm{L}\,\mathrm{T}^{-1}$, we can normalize the time $t$ by multiplying it by a new coefficient
 \begin{equation}
 \theta = \frac{\mathrm{K}}{\epsilon} \dot{=} [\mathrm{T}^{-1}].
 \end{equation}
