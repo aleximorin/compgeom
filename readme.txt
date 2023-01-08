@@ -1,0 +1,1 @@
+Modelling the development of a pressurized, non-propagating fracture in homogenous media with finite elements. Made as a final project for the course Computation geomechanics.

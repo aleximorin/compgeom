@@ -1,0 +1,60 @@
+This is BibTeX, Version 0.99d
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: Pressurized fracture.aux
+Reallocating 'name_of_file' (item size: 1) to 8 items.
+The style file: apacite.bst
+Reallocating 'name_of_file' (item size: 1) to 11 items.
+Reallocating 'glb_str_end' (item size: 4) to 20 items.
+Reallocating 'glb_str_ptr' (item size: 4) to 20 items.
+Reallocating 'global_strs' (item size: 1) to 4000000 items.
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Reallocating 'wiz_functions' (item size: 4) to 6000 items.
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Reallocating 'wiz_functions' (item size: 4) to 9000 items.
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Database file #1: References.bib
+apacite.bst [2013/07/21 v6.03 APA bibliography style]
+Warning--No journal in lecampion2022geomechanics
+You've used 2 entries,
+            6951 wiz_defined-function locations,
+            1282 strings with 11057 characters,
+and the built_in function-call counts, 3199 in all, are:
+= -- 396
+> -- 20
+< -- 149
++ -- 146
+- -- 4
+* -- 198
+:= -- 627
+add.period$ -- 8
+call.type$ -- 2
+change.case$ -- 34
+chr.to.int$ -- 0
+cite$ -- 5
+duplicate$ -- 61
+empty$ -- 129
+format.name$ -- 28
+if$ -- 605
+int.to.chr$ -- 0
+int.to.str$ -- 6
+missing$ -- 0
+newline$ -- 47
+num.names$ -- 16
+pop$ -- 40
+preamble$ -- 1
+purify$ -- 8
+quote$ -- 0
+skip$ -- 241
+stack$ -- 0
+substring$ -- 158
+swap$ -- 44
+text.length$ -- 4
+text.prefix$ -- 0
+top$ -- 1
+type$ -- 160
+warning$ -- 1
+while$ -- 10
+width$ -- 0
+write$ -- 50
+(There was 1 warning)
