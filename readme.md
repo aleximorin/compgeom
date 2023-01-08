@@ -12,4 +12,4 @@ You also can install everything needed at once for an empty environment with the
 
 ``pip install -r requirements.txt``
 
-The code used to generate the results is located in ``Notebooks/Fracture in homogenous medium.ipynb``. It can be easily accessed online from a binder environment [here](https://mybinder.org/v2/gh/aleximorin/Fracture/HEAD?labpath=https%3A%2F%2Fgithub.com%2Faleximorin%2FFracture%2Fblob%2Fmain%2FNotebooks%2FFracture%2520in%2520homogenous%2520medium.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/aleximorin/Fracture/HEAD?labpath=https%3A%2F%2Fgithub.com%2Faleximorin%2FFracture%2Fblob%2Fmain%2FNotebooks%2FFracture%2520in%2520homogenous%2520medium.ipynb)
+The code used to generate the results is located in ``Notebooks/Fracture in homogenous medium.ipynb``. It can be easily accessed online from a binder environment [here](https://mybinder.org/v2/gh/aleximorin/Fracture/HEAD?labpath=https%3A%2F%2Fgithub.com%2Faleximorin%2FFracture%2Fblob%2Fmain%2FNotebooks%2FFracture%2520in%2520homogenous%2520medium.ipynb) (it can take a little while to load).
