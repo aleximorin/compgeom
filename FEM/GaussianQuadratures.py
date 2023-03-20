@@ -8,7 +8,7 @@ import numpy as np
 
 # TRIANGLES
 _linear_triangle_gaussian_quadrature = {
-    1: (np.array([[1. / 3, 1. / 3]]), 0.5),
+    1: (np.array([[1. / 3, 1. / 3]]), np.array([[0.5, 0.5]])),
     2: (np.array([[1. / 6, 1. / 6],
                   [2. / 3, 1. / 6],
                   [1. / 6, 2. / 3]]),
@@ -34,7 +34,8 @@ _quadratic_triangle_gaussian_quadrature = {1: (np.array([[1. / 6, 1. / 6],  # ga
                                            }
 
 # SEGMENTS
-_linear_segment_gaussian_quadrature = {1: (0, 2),
+_linear_segment_gaussian_quadrature = {1: (np.array([0]),
+                                           np.array([2])),
                                        2: (np.array(
                                            [-1. / np.sqrt(3),
                                             -1. / np.sqrt(3)]),

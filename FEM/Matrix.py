@@ -37,7 +37,10 @@ def assemble_stiffness_matrix(mesh, E, nu):
         elt = Element.Triangle(X, eltype, mesh.simultype)
 
         K_el = elt.element_stiffness_matrix(D)
-        K[n_dof, np.kron(np.ones(len(n_dof)), n_dof).astype(int).reshape(len(n_dof), -1).T] += K_el
+
+        for i, ni in enumerate(n_dof):
+            for j, nj in enumerate(n_dof):
+                K[ni, nj] += K_el[i, j]
 
     return K
 
@@ -126,9 +129,17 @@ def elastic_isotropic_stiffness(k, g, simultype='2D'):
     if simultype == '2D':
         D = np.array([[La, Lb, 0],
                       [Lb, La, 0],
-                      [0, 0, g]])
+                      [0,   0, g]])
+
+    elif simultype == 'axis':
+        D = np.array([[La, Lb, 0, Lb],
+                      [Lb, La, 0, Lb],
+                      [0,   0, g,  0],
+                      [Lb, Lb, 0, La]])
+
     else:
         raise ValueError('Type not implemented yet')
+
     return D
 
 
@@ -153,7 +164,10 @@ def assemble_mass_matrix(mesh, rho):
 
         elt = Element.Triangle(X, eltype, mesh.simultype)
         M_el = elt.element_mass_matrix(rho_e)
-        M[n_e, np.kron(np.ones(len(n_e)), n_e).astype(int).reshape(len(n_e), -1).T] += M_el
+
+        for i, ni in enumerate(n_e):
+            for j, nj in enumerate(n_e):
+                M[ni, nj] += M_el[i, j]
 
     return M
 
@@ -181,7 +195,10 @@ def assemble_conductivity_matrix(mesh, cond):
 
         elt = Element.Triangle(X, eltype, mesh.simultype)
         C_el = elt.element_conductivity_matrix(cond_e)
-        C[n_e, np.kron(np.ones(len(n_e)), n_e).astype(int).reshape(len(n_e), -1).T] += C_el
+
+        for i, ni in enumerate(n_e):
+            for j, nj in enumerate(n_e):
+                C[ni, nj] += C_el[i, j]
 
     return C
 
@@ -203,7 +220,10 @@ def assemble_coupling_matrix(mesh, alpha):
         elt = Element.Triangle(X, eltype, mesh.simultype)
 
         ceel = elt.element_coupling_matrix(alpha)
-        C[n_dof, np.kron(np.ones(len(n_dof)), n_e).astype(int).reshape(len(n_dof), -1).T] += ceel.T
+
+        for i, ni in enumerate(n_dof):
+            for j, nj in enumerate(n_e):
+                C[ni, nj] += ceel[i, j]
 
     return C
 
@@ -228,7 +248,6 @@ def set_stress_field(mesh, stress_field, applied_elements=None):
 
         elt = Element.Triangle(X, eltype, mesh.simultype)
         S_el = elt.element_stress_field(stress_field)
-
         S[n_dof] += S_el
 
     return S

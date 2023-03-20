@@ -9,13 +9,14 @@ class Triangle:
         self.eltype = eltype
         self.simultype = simultype
 
-        if self.simultype != '2D':
+        if self.simultype not in ('2D', 'axis'):
             raise ValueError('Not implemented yet')
 
         self.gaussian_quadrature = gaussian_quadrature['triangle'][eltype]
 
     def N(self, x):
-        # return shape function
+        # x must be of shape (n points, n dimensions)
+        # for example x of shape (10, 2) means that it contains ten 2d pointsè
 
         if len(x.shape) == 1:
             x = np.array(x)  # will this give x the shape (1, n)?
@@ -63,33 +64,52 @@ class Triangle:
 
         return DNaDX, j
 
+    def mapX(self, x):
+        return self.N(x) @ self.X
+
     def element_conductivity_matrix(self, cond):
         xg, wg = self.gaussian_quadrature[1]
         DNaDX, j = self.gradN(xg)
+        DNaDXT = np.moveaxis(DNaDX, -1, -2)
 
         if self.simultype == '2D':
-            DNaDXT = np.moveaxis(DNaDX, -1, -2)
-            A = np.einsum('ijk, ikl -> ijl', DNaDXT, DNaDX)
             left = (wg * j * cond)
-            kel = np.sum(left[:, None, None] * A, axis=0)  # might not work with just a linear element :'(
+
+        elif self.simultype == 'axis':
+            mapx = self.mapX(xg)
+            left = (2 * np.pi * wg * j * cond * mapx)[:, 0]
 
         else:
             raise ValueError('Not implemented yet')
+
+        A = np.einsum('ijk, ikl -> ijl', DNaDXT, DNaDX)
+        kel = np.sum(left[:, None, None] * A, axis=0)
 
         return kel
 
     def element_stiffness_matrix(self, D):
         xg, wg = self.gaussian_quadrature[1]
         B, j = self.B_strain_matrix(xg)
+        BT = np.moveaxis(B, -1, -2)
 
         if self.simultype == '2D':
+            left = wg * j
 
-            kel = wg * j * np.moveaxis(B, -1, -2) @ D @ B
+        elif self.simultype == 'axis':
+            # why do we just take the 0th element??? according to matlab here
+            mapx = self.mapX(xg)
+            left = 2 * np.pi * mapx * wg * j
 
-            if len(kel.shape) > 2:  # some bandaid fix while it is not consistent between linear and quadratic elements
-                kel = kel.sum(axis=0)
+            """
+            # this would work if we were to not only use the 0th element
+            left = 2 * np.pi * mapx * wg * j
+            kel = np.einsum('ij, ikl -> jkl', left, BT @ D @ B))
+            """
+
         else:
             raise ValueError('Not implemented yet')
+
+        kel = np.sum(left[:, 0] * BT @ D @ B, axis=0)
 
         return kel
 
@@ -100,34 +120,64 @@ class Triangle:
         N_i = self.N(xg)
 
         if self.simultype == '2D':
-            A = np.einsum('ij, ik -> ijk', N_i, N_i)
             left = (wg * j * rho)
-            kel = np.sum(left[:, None, None] * A, axis=0)  # might not work with just a linear element :'(
+
+        elif self.simultype == 'axis':
+            mapx = self.mapX(xg)
+            left = 2 * np.pi * wg * j * rho * mapx[:, 0]
 
         else:
             raise ValueError('Not implemented yet')
+
+        A = np.einsum('ij, ik -> ijk', N_i, N_i)
+        kel = np.sum(left[:, None, None] * A, axis=0)
 
         return kel
 
     def B_strain_matrix(self, xg):
         DnaDx, j = self.gradN(xg)
+        zero = 0 * DnaDx[:, 0, 0]
 
         if self.simultype == '2D':
-            zero = 0 * DnaDx[:, 0, 0]
-
             if self.eltype == 'linear':
+                # 3 x 6 matrix
                 B = np.array([[DnaDx[:, 0, 0], zero, DnaDx[:, 0, 1], zero, DnaDx[:, 0, 2], zero],
                              [zero, DnaDx[:, 1, 0], zero, DnaDx[:, 1, 1], zero, DnaDx[:, 1, 2]],
-                             [DnaDx[:, 1, 0], DnaDx[:, 0, 0], DnaDx[:, 1, 1],
-                              DnaDx[:, 0, 1], DnaDx[:, 1, 2], DnaDx[:, 0, 2]]])
+                             [DnaDx[:, 1, 0], DnaDx[:, 0, 0], DnaDx[:, 1, 1], DnaDx[:, 0, 1], DnaDx[:, 1, 2], DnaDx[:, 0, 2]]])
 
             elif self.eltype == 'quadratic':
+                # 3 x 12 matrix
                 B = np.array([[DnaDx[:, 0, 0], zero, DnaDx[:, 0, 1], zero, DnaDx[:, 0, 2], zero,
                                DnaDx[:, 0, 3], zero, DnaDx[:, 0, 4], zero, DnaDx[:, 0, 5], zero],
                               [zero, DnaDx[:, 1, 0], zero, DnaDx[:, 1, 1], zero, DnaDx[:, 1, 2],
                                zero, DnaDx[:, 1, 3], zero, DnaDx[:, 1, 4], zero, DnaDx[:, 1, 5]],
                               [DnaDx[:, 1, 0], DnaDx[:, 0, 0], DnaDx[:, 1, 1], DnaDx[:, 0, 1], DnaDx[:, 1, 2], DnaDx[:, 0, 2],
                                DnaDx[:, 1, 3], DnaDx[:, 0, 3], DnaDx[:, 1, 4], DnaDx[:, 0, 4], DnaDx[:, 1, 5], DnaDx[:, 0, 5]]])
+
+        elif self.simultype == 'axis':
+
+            mapx = self.mapX(xg)
+            Nx = self.N(xg)
+
+            if self.eltype == 'linear':
+                # 4 x 6 matrix
+                B = np.array([[DnaDx[:, 0, 0], zero, DnaDx[:, 0, 1], zero, DnaDx[:, 0, 2], zero],
+                              [zero, DnaDx[:, 1, 0], zero, DnaDx[:, 1, 1], zero, DnaDx[:, 1, 2]],
+                              [DnaDx[:, 1, 0], DnaDx[:, 0, 0], DnaDx[:, 1, 1], DnaDx[:, 0, 1], DnaDx[:, 1, 2], DnaDx[:, 0, 2]],
+                              [Nx[:, 0] / mapx[:, 0], zero, Nx[:, 1] / mapx[:, 0], zero, Nx[:, 0] / mapx[:, 0], zero]])
+
+            if self.eltype == 'quadratic':
+                # don't know if it works, will need to check with a quadratic mesh
+                # 4 x 12 matrix
+                B = np.array([[DnaDx[:, 0, 0], zero, DnaDx[:, 0, 1], zero, DnaDx[:, 0, 2], zero,
+                               DnaDx[:, 0, 3], zero, DnaDx[:, 0, 4], zero, DnaDx[:, 0, 5], zero],
+                              [zero, DnaDx[:, 1, 0], zero, DnaDx[:, 1, 1], zero, DnaDx[:, 1, 2],
+                               zero, DnaDx[:, 1, 3], zero, DnaDx[:, 1, 4], zero, DnaDx[:, 1, 5]],
+                              [DnaDx[:, 1, 0], DnaDx[:, 0, 0], DnaDx[:, 1, 1], DnaDx[:, 0, 1], DnaDx[:, 1, 2], DnaDx[:, 0, 2],
+                               DnaDx[:, 1, 3], DnaDx[:, 0, 3], DnaDx[:, 1, 4], DnaDx[:, 0, 4], DnaDx[:, 1, 5], DnaDx[:, 0, 5]],
+                              [Nx[:, 0]/mapx[:, 0], zero, Nx[:, 1]/mapx[:, 0], zero, Nx[:, 2]/mapx[:, 0], zero,
+                               Nx[:, 3]/mapx[:, 0], zero, Nx[:, 4]/mapx, zero, Nx[:, 5]/mapx, zero]])
+
 
         else:
             raise ValueError('Not implemented yet')
@@ -137,34 +187,43 @@ class Triangle:
 
     def element_coupling_matrix(self, alpha):
         xg, wg = self.gaussian_quadrature[2]
+        B, j = self.B_strain_matrix(xg)
+        N_i = self.N(xg)
 
         if self.simultype == '2D':
-            B, j = self.B_strain_matrix(xg)
             Baux = B[:, 0] + B[:, 1]
-            N_i = self.N(xg)
-
-            A = np.einsum('ij, ik -> ijk', Baux, N_i)
             left = wg * j * alpha
-            ceel = np.sum(left[:, None, None] * A, axis=0)
+
+        elif self.simultype == 'axis':
+            Baux = B[:, 0] + B[:, 1] + B[:, -1]
+            mapx = self.mapX(xg)
+            left = 2 * np.pi * wg * j *alpha * mapx[:, 0]
 
         else:
             raise ValueError('Not implemented yet')
+
+        A = np.einsum('ij, ik -> ijk', Baux, N_i)
+        ceel = np.sum(left[:, None, None] * A, axis=0)
 
         return ceel
 
     def element_stress_field(self, stress_field):
+        xg, wg = self.gaussian_quadrature[2]
+        B, j = self.B_strain_matrix(xg)
+        BT = np.moveaxis(B, -1, -2)
 
         if self.simultype == '2D':
-            xg, wg = self.gaussian_quadrature[2]
-            B, j = self.B_strain_matrix(xg)
-            BT = np.moveaxis(B, -1, -2)
-
-            A = BT @ stress_field
             left = j * wg
-            s_el = left @ A
+
+        elif self.simultype == 'axis':
+            mapx = self.mapX(xg)
+            left = 2 * np.pi * j * wg * mapx[:, 0]
 
         else:
             raise ValueError('Not implemented yet')
+
+        A = BT @ stress_field
+        s_el = left @ A
 
         return s_el
 
@@ -210,13 +269,14 @@ class Segment:
         self.eltype = eltype
         self.simultype = simultype
 
-        if self.simultype != '2D':
+        if self.simultype not in ('2D', 'axis'):
             raise ValueError('Not implemented yet')
 
         self.gaussian_quadrature = gaussian_quadrature['segment'][eltype]
 
     def N(self, x):
-        # return shape function
+        # x must be of shape (n points, n dimensions)
+        # for example x of shape (10, 2) means that it contains ten 2d points
 
         if self.eltype == 'linear':
             n = np.array([0.5*(1 - x), 0.5*(1 + x)]).T
@@ -246,6 +306,9 @@ class Segment:
 
         return DNaDX, j
 
+    def mapX(self, x):
+        return self.N(x) @ self.X
+
     def B_strain_matrix(self, x):
 
         if self.simultype == '2D':
@@ -262,8 +325,14 @@ class Segment:
 
         if self.simultype == '2D':
             left = wg * j
-            fel = np.sum(left[:, None] * N * f, axis=0)
+
+        elif self.simultype == 'axis':
+            mapx = self.mapX(xg)
+            left = 2 * np.pi * wg * j * mapx
+
         else:
             raise ValueError('Not implemented yet')
+
+        fel = np.sum(left[:, None] * N * f, axis=0)
 
         return fel

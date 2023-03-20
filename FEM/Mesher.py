@@ -6,8 +6,7 @@ from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 
 
 def build_edges(vertices):
-    edges = np.array([[i, i + 1] for i in range(len(vertices))])
-    edges[-1, -1] = 0
+    edges = np.array([[i, i + 1] for i in range(len(vertices))]) % len(vertices)
     return edges
 
 
@@ -38,10 +37,13 @@ def tri3_2_tri6(mesh3):
 
 
 class Mesh:
-    def __init__(self, vertices, edges, cell_size=5, simultype='2D'):
+    def __init__(self, vertices, edges, cell_size=5,
+                 simultype='2D', holes=None):
 
-        A = dict(vertices=vertices, segments=edges, regions=np.array([[0.5, 0.5, 1, 0]]))
-        out = tr.triangulate(A, f'pq30a{cell_size}')
+        A = dict(vertices=vertices, segments=edges, holes=holes, regions=np.array([[0.5, 0.5, 1, 0]]))
+        A = {key: item for key, item in A.items() if item is not None}
+
+        out = tr.triangulate(A, f'pqa{cell_size}')
         self._parse_mesh(out)
         self.simultype = simultype
 
@@ -71,7 +73,7 @@ class Mesh:
                  triangles=self._mesh['triangles'],
                  triangle_max_area=triangle_max_area)
 
-        out = tr.triangulate(A, f'rpq30a')
+        out = tr.triangulate(A, f'rpq')
         self._parse_mesh(out)
 
     def fan_refine(self, center, radius, theta_min, theta_max, area=1, npoints=50):
@@ -100,3 +102,29 @@ class Mesh:
             return fig, ax, cb
 
         return fig, ax
+
+if __name__ == '__main__':
+
+    # we can define the geometry of the problem
+
+    # this simple functions creates a circle
+    def circle(N, R):
+        i = np.arange(N)
+        theta = i * 2 * np.pi / N
+        pts = np.stack([np.cos(theta), np.sin(theta)], axis=1) * R
+        seg = np.stack([i, i + 1], axis=1) % N
+        return pts, seg
+
+    r = 1
+    R = 30
+    inner, inner_edges = circle(10, r)
+    outer, outer_edges = circle(25, R)
+    vertices = np.vstack((inner, outer))
+    edges = np.vstack((inner_edges, outer_edges + len(inner_edges)))
+    area = 10
+    mesh = Mesh(vertices, edges, cell_size=area, holes=[[0, 0]])
+    mesh.plot()
+    plt.gcf().set_size_inches(10, 10)
+    plt.gca().set_aspect(1)
+    plt.scatter(*vertices.T)
+    plt.show()
