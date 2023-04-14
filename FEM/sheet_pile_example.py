@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from Mesher import Mesh
+from Mesher import Mesh, tri3_2_tri6
 import Matrix
 from scipy.sparse import linalg
+import pygmsh
 
 if __name__ == '__main__':
 
@@ -22,10 +23,31 @@ if __name__ == '__main__':
                          [l1 + lwall + l2, h2],
                          [l1 + lwall + l2, 0]])
 
-    edges = np.array([[i, i + 1] for i in range(len(vertices))])
-    edges[-1, -1] = 0
+    resolutions = np.array([2,
+                            2,
+                            1,
+                            0.1,
+                            0.1,
+                            1,
+                            2,
+                            2])
 
-    mesh = Mesh(vertices, edges, cell_size=5)
+    with pygmsh.geo.Geometry() as geom:
+        lines = []
+        p1 = p0 = geom.add_point(vertices[0], resolutions[0])
+        for i in range(len(vertices) - 1):
+            p2 = geom.add_point(vertices[i + 1], resolutions[i + 1])
+            line = geom.add_line(p1, p2)
+            lines.append(line)
+            p1 = p2
+        lines.append(geom.add_line(p2, p0))
+        loop = geom.add_curve_loop(lines)
+        surf = geom.add_plane_surface(loop)
+        out = geom.generate_mesh()
+
+    mesh = Mesh(out)
+    #mesh = tri3_2_tri6(mesh)
+    mesh.plot()
 
     left = np.argwhere(mesh.nodes[:, 0] == 0)
     right = np.argwhere(mesh.nodes[:, 0] == mesh.nodes[:, 0].max())

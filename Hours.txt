@@ -1,0 +1,4 @@
+2023-04-13 + 2023-04-14 (5 heures)
+ - complétion de l'utilisation de pygmsh au lieu de triangles
+  - fixer le problème de pygmsh générant des points inutiles
+ - génerer un squelette du problème 1 et du wellbore injection

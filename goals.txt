@@ -30,3 +30,6 @@
 2. add axisymmetry
 3. refactoring the code 
 	
+2023-03-21
+- keeping track of hours
+- have in mind that we can have rectangular elements (gmsh wrapper)

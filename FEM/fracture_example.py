@@ -14,49 +14,37 @@ plt.rcParams['text.usetex'] = True
 
 if __name__ == '__main__':
 
-    # We define the geometry of the problem
-    frac_length = 1
+    frac_length = 1.0
     box_length = 20 * frac_length
 
-    npoints = 20
-    vertices = np.vstack((np.linspace(0, 2 * frac_length, 2 * npoints + 1), np.zeros(2 * npoints + 1))).T
-    other_vertices = np.array([[box_length, 0],
-                               [box_length, box_length],
-                               [0, box_length],
-                               ])
+    cell_size = 0.1
+    factor = 100
 
-    vertices = np.vstack((vertices, other_vertices, np.roll(vertices[1:], shift=1, axis=1)[::-1]))
+    import pygmsh
 
-    edges = Mesher.build_edges(vertices)
+    with pygmsh.geo.Geometry() as geom:
+        p00 = geom.add_point([0, 0], cell_size)
+        pfrac = geom.add_point([frac_length, 0], cell_size)
+        pfrac2 = geom.add_point([2 * frac_length, 0], cell_size)
+        p10 = geom.add_point([box_length, 0], cell_size * factor)
+        p11 = geom.add_point([box_length, box_length], cell_size * factor)
+        p01 = geom.add_point([0, box_length], cell_size * factor)
 
-    plt.scatter(*vertices.T)
-    for e in edges:
-        (x0, y0), (x1, y1) = vertices[e]
-        plt.plot([x0, x1], [y0, y1])
-    plt.title('Nodes and edges')
+        fracture = geom.add_line(p00, pfrac)
+        bottom_refined = geom.add_line(pfrac, pfrac2)
+        bottom = geom.add_line(pfrac2, p10)
+        right = geom.add_line(p10, p11)
+        top = geom.add_line(p11, p01)
+        left = geom.add_line(p01, p00)
 
-    mesh = Mesher.Mesh(vertices, edges, cell_size=3)
-    for r in np.arange(10, 0, -1):
-        print(r, r / 10)
-        mesh.fan_refine([frac_length, 0], r * frac_length, 0, np.pi, area=r / 10)
-    bbox = np.array([[0, 0],
-                     [0, frac_length],
-                     [frac_length, frac_length],
-                     [frac_length, 0]])
+        loop = geom.add_curve_loop([fracture, bottom_refined, bottom, right, top, left])
+        surface = geom.add_plane_surface(loop)
+        out = geom.generate_mesh()
 
-    fig, axs = plt.subplots(1, 2, sharex='row', sharey='row', figsize=(10, 4))
-    mesh.plot(ax=axs[0])
-    axs[0].set_title('Non-refined mesh')
-    mesh.refine(10 * bbox, area=1)
-    mesh.refine(8 * bbox, area=0.5)
-    mesh.refine(5 * bbox, area=0.25)
-    mesh.refine(2 * bbox, area=0.1)
-    mesh.refine(1 * bbox, area=0.1)
-    mesh.plot(ax=axs[1])
-    axs[1].set_title('Refined mesh')
-    axs[0].set_aspect(1)
-    axs[1].set_aspect(1)
-    print(f'Refined mesh contains {len(mesh.nodes)} nodes')
+    mesh = Mesher.Mesh(out)
+    mesh.plot()
+    plt.xlim(0, 3 * frac_length)
+    plt.ylim(0, 3 * frac_length)
 
     mesh = Mesher.tri3_2_tri6(mesh)
     """matmesh = loadmat('../quad.mat')

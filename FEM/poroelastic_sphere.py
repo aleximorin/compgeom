@@ -75,4 +75,32 @@ if __name__ == '__main__':
     C = Matrix.assemble_conductivity_matrix(mesh, kappa)
     Ce = Matrix.assemble_coupling_matrix(mesh, b)
 
+    # we can now solve the undrained case
+    dt = 0
+    AA = -Mass - dt *C
+
+    ntot_E = mesh.nn * 2
+    ntot_P = mesh.nn
+    ntot = ntot_E + ntot_P
+
+    T = csc_matrix((ntot, ntot))
+    T[:ntot_E, :ntot_E] = K
+    T[ntot_E:, :ntot_E] = -Ce.T
+    T[:ntot_E, ntot_E:] = -Ce
+    T[ntot_E:, ntot_E:] = -AA
+
+    ftot = csc_matrix((ntot, 1))
+    ftot[:ntot_E] = sigma0
+
+    eq_free_disp = np.setdiff1d(np.arange(ntot_E), fixed_dof)
+    eq_free_p = np.arange(ntot_P) + ntot_E
+    eq_free = np.hstack(eq_free_disp, eq_free_p)
+
+    # solving the system
+    undrained_sol = csc_matrix((ntot, 1))
+    undrained_sol[eq_free] = linalg.spsolve(T[eq_free][:, eq_free], ftot[eq_free])
+
+    pressure_undrained = undrained_sol[ntot_E:].toarray()
+    disp_undrained = undrained_sol[:ntot_E].toarray().reshape(2, -1, order='F')
+
     

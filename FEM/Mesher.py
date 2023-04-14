@@ -37,59 +37,42 @@ def tri3_2_tri6(mesh3):
 
 
 class Mesh:
-    def __init__(self, vertices, edges, cell_size=5,
-                 simultype='2D', holes=None):
+    def __init__(self, meshio_mesh, cell_type='triangle', simultype='2D'):
 
-        A = dict(vertices=vertices, segments=edges, holes=holes, regions=np.array([[0.5, 0.5, 1, 0]]))
-        A = {key: item for key, item in A.items() if item is not None}
+        self.cell_type = cell_type
 
-        out = tr.triangulate(A, f'pqa{cell_size}')
-        self._parse_mesh(out)
+        self._parse_mesh(meshio_mesh)
         self.simultype = simultype
 
     def _parse_mesh(self, out):
 
-        self._mesh = out
-        self.nodes = self._mesh['vertices']
-        self.connectivity = self._mesh['triangles']
+        # we initially take the connectivity from the meshio object
+        connectivity = out.cells_dict[self.cell_type].astype(int)
+
+        # we need to filter the unused nodes that are residuals from pygmsh
+        # did not find native way to do it
+        used_nodes = np.zeros(len(out.points), dtype=bool)
+        used_nodes[np.unique(connectivity)] = True
+        nodes = out.points[used_nodes, :2]
+
+        # we create an index map to reflect the new node indices
+        index_map = np.zeros(len(out.points), dtype=int)
+        index_map[used_nodes] = np.arange(len(nodes))
+        new_connectivity = index_map[connectivity]
+
+        # we now parse the arguments to te mesh object
+        self.nodes = nodes
+        self.connectivity = new_connectivity
 
         self.ne = len(self.connectivity)
         self.nn = len(self.nodes)
 
         self.id = np.zeros(self.ne).astype(int)
 
-    def refine(self, bbox, area=1):
-
-        from scipy.spatial import Delaunay
-
-        ch = Delaunay(bbox)
-        nodes_in_hull = ch.find_simplex(self.nodes, tol=1e-3) > 0
-        elem_in_hull = np.sum(np.isin(self.connectivity, np.argwhere(nodes_in_hull)[:, 0]), axis=1) > 0
-
-        triangle_max_area = np.ones(len(elem_in_hull)) * area
-        triangle_max_area[~elem_in_hull] = -1
-        A = dict(vertices=self._mesh['vertices'],
-                 vertex_markers=self._mesh['vertex_markers'],
-                 triangles=self._mesh['triangles'],
-                 triangle_max_area=triangle_max_area)
-
-        out = tr.triangulate(A, f'rpq')
-        self._parse_mesh(out)
-
-    def fan_refine(self, center, radius, theta_min, theta_max, area=1, npoints=50):
-
-        offset = (theta_max - theta_min) * 0.05
-
-        theta = np.linspace(theta_min - offset, theta_max + offset, npoints)
-        x = radius * np.hstack(([0], np.cos(theta))) + center[0]
-        y = radius * np.hstack(([0], np.sin(theta))) + center[1]
-
-        bbox = np.vstack((x, y)).T
-        self.refine(bbox, area)
-
     def plot(self, z=None, c='k', shading='gouraud', ax=None):
         if ax is None:
             fig, ax = plt.subplots()
+            ax.set_aspect(1)
         else:
             fig = plt.gcf()
 
@@ -103,28 +86,61 @@ class Mesh:
 
         return fig, ax
 
+
 if __name__ == '__main__':
 
-    # we can define the geometry of the problem
+    # we define the mesh
 
-    # this simple functions creates a circle
-    def circle(N, R):
-        i = np.arange(N)
-        theta = i * 2 * np.pi / N
-        pts = np.stack([np.cos(theta), np.sin(theta)], axis=1) * R
-        seg = np.stack([i, i + 1], axis=1) % N
-        return pts, seg
+    cl = 0.1
+    import pygmsh
 
-    r = 1
-    R = 30
-    inner, inner_edges = circle(10, r)
-    outer, outer_edges = circle(25, R)
-    vertices = np.vstack((inner, outer))
-    edges = np.vstack((inner_edges, outer_edges + len(inner_edges)))
-    area = 10
-    mesh = Mesh(vertices, edges, cell_size=area, holes=[[0, 0]])
+    # bro nice face
+    with pygmsh.geo.Geometry() as geom:
+        face = geom.add_circle([0.0, 0.0], 1, mesh_size=2 * cl, make_surface=False, compound=False)
+        eye1 = geom.add_circle([-0.4, 0.25], 0.2, mesh_size=cl, make_surface=False, compound=False)
+        eye2 = geom.add_circle([0.4, 0.25], 0.2, mesh_size=cl, make_surface=False, compound=False)
+
+        p1 = geom.add_point([0.7, -0.2], cl)
+        p2 = geom.add_point([-0.7, -0.2], cl)
+
+        c1 = geom.add_point([0, 2], cl)
+        c2 = geom.add_point([0, -0.1], cl)
+
+        m1 = geom.add_circle_arc(p1, c1, p2)
+        m2 = geom.add_circle_arc(p2, c2, p1)
+
+        mouth = geom.add_curve_loop([m1, m2])
+
+        surface = geom.add_plane_surface(face.curve_loop, holes=[eye1.curve_loop, eye2.curve_loop, mouth])
+
+        out = geom.generate_mesh(dim=2)
+
+    mesh = Mesh(out)
     mesh.plot()
-    plt.gcf().set_size_inches(10, 10)
-    plt.gca().set_aspect(1)
-    plt.scatter(*vertices.T)
+    plt.scatter(*mesh.nodes.T, c='k', s=2)
     plt.show()
+
+    """import pygmsh
+    with pygmsh.geo.Geometry() as geom:
+        hole = geom.add_circle([0.4, 0.4], 0.1, mesh_size=cl, make_surface=False)
+        center = geom.add_point([0, 0], cl)
+        p1 = geom.add_point([1, 0], cl)
+        p2 = geom.add_point([0, 1], cl)
+        arc = geom.add_circle_arc(p1, center, p2)
+        bottom = geom.add_line(center, p1)
+        left = geom.add_line(p2, center)
+        loop = geom.add_curve_loop([bottom, arc, left])
+        surface = geom.add_plane_surface(loop, holes=[hole.curve_loop])
+        out = geom.generate_mesh(dim=2)
+
+    plt.triplot(*out.points[:, :2].T, out.cells_dict['triangle'], )
+    plt.gca().set_aspect(1)"""
+
+
+"""
+z = np.arange(mesh.nn)
+plt.tripcolor(*mesh.nodes.T, mesh.connectivity[:, :3], z, shading='flat')
+plt.triplot(*mesh.nodes.T, mesh.connectivity[:, :3], c='k', lw=0.5)
+plt.scatter(*mesh.nodes.T, c='k', s=2)
+plt.gca().set_aspect(1)
+"""

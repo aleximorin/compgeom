@@ -77,11 +77,12 @@ class Triangle:
 
         elif self.simultype == 'axis':
             mapx = self.mapX(xg)
-            left = (2 * np.pi * wg * j * cond * mapx)[:, 0]
+            left = (2 * np.pi * wg * j * cond * mapx[:, 0])
 
         else:
             raise ValueError('Not implemented yet')
 
+        # A is (n gauss points, n el, n el)
         A = np.einsum('ijk, ikl -> ijl', DNaDXT, DNaDX)
         kel = np.sum(left[:, None, None] * A, axis=0)
 
@@ -97,7 +98,7 @@ class Triangle:
 
         elif self.simultype == 'axis':
             # why do we just take the 0th element??? according to matlab here
-            mapx = self.mapX(xg)
+            mapx = self.mapX(xg)[:, 0]
             left = 2 * np.pi * mapx * wg * j
 
             """
@@ -109,7 +110,7 @@ class Triangle:
         else:
             raise ValueError('Not implemented yet')
 
-        kel = np.sum(left[:, 0] * BT @ D @ B, axis=0)
+        kel = np.sum(left * BT @ D @ B, axis=0)
 
         return kel
 
