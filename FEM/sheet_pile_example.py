@@ -73,9 +73,11 @@ if __name__ == '__main__':
     A = -C_fixed @ h_fixed
     h_unknown = linalg.inv(C_unknown) @ A
 
-    h = np.zeros(mesh.nn)
+    h = np.zeros((mesh.nn))
     h[nodes_unknown] = h_unknown
     h[nodes_fixed] = h_fixed
 
     mesh.plot(h)
+
+    Matrix.project_flux(mesh, 1, h)
     plt.show()

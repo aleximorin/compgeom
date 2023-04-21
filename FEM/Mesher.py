@@ -69,7 +69,7 @@ class Mesh:
 
         self.id = np.zeros(self.ne).astype(int)
 
-    def plot(self, z=None, c='k', shading='gouraud', ax=None):
+    def plot(self, z=None, c='k', shading='gouraud', ax=None, vmin=None, vmax=None, cmap='viridis'):
         if ax is None:
             fig, ax = plt.subplots()
             ax.set_aspect(1)
@@ -78,7 +78,8 @@ class Mesh:
 
         ax.triplot(*self.nodes.T, self.connectivity[:, :3], c=c, lw=0.5)
         if z is not None:
-            im = ax.tripcolor(*self.nodes.T, self.connectivity[:, :3], z, shading=shading)
+            im = ax.tripcolor(*self.nodes.T, self.connectivity[:, :3], z, cmap=cmap,
+                              shading=shading, vmin=vmin, vmax=vmax)
             divider = make_axes_locatable(ax)
             cax = divider.append_axes('right', size=0.2, pad=0.1)
             cb = plt.colorbar(im, cax=cax)

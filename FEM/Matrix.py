@@ -46,6 +46,13 @@ def assemble_stiffness_matrix(mesh, E, nu):
 
 
 def project_flux(mesh, K, head, M=None, return_M=False):
+
+    if sparse.issparse(head):
+        head = head.toarray()
+
+    if len(head.shape) == 1:
+        head = head[:, None]
+
     if M is None:
         M = assemble_mass_matrix(mesh, 1.0)
 

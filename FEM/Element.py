@@ -256,10 +256,13 @@ class Triangle:
             solve = - K * np.einsum('ijk, kl -> ij', DNaDx, head)
             left = j * wg
 
-            f_el = np.sum(left[:, None, None] * np.einsum('ij, ik -> ijk', N_i, solve), axis=0)
+        elif self.simultype == 'axis':
+            raise ValueError('Not implemented yet')
 
         else:
             raise ValueError('Not implemented yet')
+
+        f_el = np.sum(left[:, None, None] * np.einsum('ij, ik -> ijk', N_i, solve), axis=0)
 
         return f_el
 
