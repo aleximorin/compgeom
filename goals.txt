@@ -33,3 +33,10 @@
 2023-03-21
 - keeping track of hours
 - have in mind that we can have rectangular elements (gmsh wrapper)
+
+
+2023-05-03
+- Mesher.py : clean the examples, remove import triangles
+- Matrix.py : find_eltype, rename and/or make part of Mesh object
+- Upload code to another repo directly and make Emil co repo owner
+- pygmsh : check out add_physical

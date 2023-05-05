@@ -8,6 +8,8 @@ import Element
 
 import PoroElasticProperties as prop
 
+print('haha')
+
 
 def find_eltype(mesh):
     ne, nc = mesh.connectivity.shape

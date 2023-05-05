@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import triangle as tr
 import copy
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 
@@ -100,6 +99,8 @@ if __name__ == '__main__':
         face = geom.add_circle([0.0, 0.0], 1, mesh_size=2 * cl, make_surface=False, compound=False)
         eye1 = geom.add_circle([-0.4, 0.25], 0.2, mesh_size=cl, make_surface=False, compound=False)
         eye2 = geom.add_circle([0.4, 0.25], 0.2, mesh_size=cl, make_surface=False, compound=False)
+
+        geom.add_physical(face)
 
         p1 = geom.add_point([0.7, -0.2], cl)
         p2 = geom.add_point([-0.7, -0.2], cl)
