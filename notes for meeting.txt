@@ -1,1 +1,0 @@
-what does 'note also for axis problem, only segment along e_r are properly integrated' mean?
