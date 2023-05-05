@@ -1,4 +1,4 @@
-# CIVIL-423
+# CIVIL-423: Computational geomechanics
 
 Finite element python code for the course [Computational geomechanics'](https://edu.epfl.ch/coursebook/en/computational-geomechanics-CIVIL-423) exercises. 
 
