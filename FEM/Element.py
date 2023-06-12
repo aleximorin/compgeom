@@ -48,11 +48,13 @@ class Triangle:
             DnaDxi = np.stack([DnaDxi for i in range(len(x))])
 
         elif self.eltype == 'quadratic':
+            zero = 0*x[:, 0]
             DnaDxi = np.array(
-                [[4 * x[:, 0] - 1, 0*x[:, 0], 4 * (x[:, 0] + x[:, 1]) - 3, 4*x[:, 1], -4 * x[:, 1], 4 * (1 - 2*x[:, 0] - x[:, 1])],
-                 [0 * x[:, 0], 4 * x[:, 1] - 1, 4 * (x[:, 0] + x[:, 1]) - 3, 4*x[:, 0], 4 * (1 - 2*x[:, 1] - x[:, 0]), - 4 * x[:, 0]]])
+                [[4 * x[:, 0] - 1, zero, 4 * (x[:, 0] + x[:, 1]) - 3, 4*x[:, 1], -4 * x[:, 1], 4 * (1 - 2*x[:, 0] - x[:, 1])],
+                 [zero, 4 * x[:, 1] - 1, 4 * (x[:, 0] + x[:, 1]) - 3, 4*x[:, 0], 4 * (1 - 2*x[:, 1] - x[:, 0]), - 4 * x[:, 0]]])
 
-            DnaDxi = np.moveaxis(DnaDxi, [2, 1], [0, 2])  # cant find a better way
+            # we re arrange the tensor so that it has a shape of (ngauss points, m, n)
+            DnaDxi = np.moveaxis(DnaDxi, [2, 1], [0, 2])
 
         else:
             raise ValueError('Not implemented yet')
@@ -97,29 +99,24 @@ class Triangle:
             left = wg * j
 
         elif self.simultype == 'axis':
-            # why do we just take the 0th element??? according to matlab here
-            mapx = self.mapX(xg)[:, 0]
+            mapx = self.mapX(xg)[:, 0] # we only take the x component
             left = 2 * np.pi * mapx * wg * j
-
-            """
-            # this would work if we were to not only use the 0th element
-            left = 2 * np.pi * mapx * wg * j
-            kel = np.einsum('ij, ikl -> jkl', left, BT @ D @ B))
-            """
 
         else:
             raise ValueError('Not implemented yet')
 
-        kel = np.sum(left * BT @ D @ B, axis=0)
-
+        kel = np.sum(left[:, None, None] * BT @ D @ B, axis=0)
         return kel
 
     def element_mass_matrix(self, rho):
+        # chi, eta coordinates and weights of the gauss points
         xg, wg = self.gaussian_quadrature[2]
 
-        DnaDx, j = self.gradN(xg)
+        # we compute the shape function and it's gradient for every gauss point
         N_i = self.N(xg)
+        DnaDx, j = self.gradN(xg)
 
+        # left is a scaling factor with respect to the gauss points
         if self.simultype == '2D':
             left = (wg * j * rho)
 
@@ -130,16 +127,23 @@ class Triangle:
         else:
             raise ValueError('Not implemented yet')
 
+        # we do the integration for every gauss point at the same time with vectorization
         A = np.einsum('ij, ik -> ijk', N_i, N_i)
         kel = np.sum(left[:, None, None] * A, axis=0)
 
         return kel
 
     def B_strain_matrix(self, xg):
+
+        # we comptue the gradient of the shape function for every gauss point
         DnaDx, j = self.gradN(xg)
+
+        # we need a zero vector with the right shape so that it fits in the matrix
         zero = 0 * DnaDx[:, 0, 0]
 
         if self.simultype == '2D':
+
+            # in 2d, we have a tensor with respect to sigma_xx, sigma_yy and tau_xy
             if self.eltype == 'linear':
                 # 3 x 6 matrix
                 B = np.array([[DnaDx[:, 0, 0], zero, DnaDx[:, 0, 1], zero, DnaDx[:, 0, 2], zero],
@@ -157,6 +161,8 @@ class Triangle:
 
         elif self.simultype == 'axis':
 
+            # in axissymmetry, we have a tensor with respect to sigma_rr, sigma_zz and tau_rz and sigma_thetatheta
+
             mapx = self.mapX(xg)
             Nx = self.N(xg)
 
@@ -165,10 +171,9 @@ class Triangle:
                 B = np.array([[DnaDx[:, 0, 0], zero, DnaDx[:, 0, 1], zero, DnaDx[:, 0, 2], zero],
                               [zero, DnaDx[:, 1, 0], zero, DnaDx[:, 1, 1], zero, DnaDx[:, 1, 2]],
                               [DnaDx[:, 1, 0], DnaDx[:, 0, 0], DnaDx[:, 1, 1], DnaDx[:, 0, 1], DnaDx[:, 1, 2], DnaDx[:, 0, 2]],
-                              [Nx[:, 0] / mapx[:, 0], zero, Nx[:, 1] / mapx[:, 0], zero, Nx[:, 0] / mapx[:, 0], zero]])
+                              [Nx[:, 0] / mapx[:, 0], zero, Nx[:, 1] / mapx[:, 0], zero, Nx[:, 2] / mapx[:, 0], zero]])
 
             if self.eltype == 'quadratic':
-                # don't know if it works, will need to check with a quadratic mesh
                 # 4 x 12 matrix
                 B = np.array([[DnaDx[:, 0, 0], zero, DnaDx[:, 0, 1], zero, DnaDx[:, 0, 2], zero,
                                DnaDx[:, 0, 3], zero, DnaDx[:, 0, 4], zero, DnaDx[:, 0, 5], zero],
@@ -177,17 +182,21 @@ class Triangle:
                               [DnaDx[:, 1, 0], DnaDx[:, 0, 0], DnaDx[:, 1, 1], DnaDx[:, 0, 1], DnaDx[:, 1, 2], DnaDx[:, 0, 2],
                                DnaDx[:, 1, 3], DnaDx[:, 0, 3], DnaDx[:, 1, 4], DnaDx[:, 0, 4], DnaDx[:, 1, 5], DnaDx[:, 0, 5]],
                               [Nx[:, 0]/mapx[:, 0], zero, Nx[:, 1]/mapx[:, 0], zero, Nx[:, 2]/mapx[:, 0], zero,
-                               Nx[:, 3]/mapx[:, 0], zero, Nx[:, 4]/mapx, zero, Nx[:, 5]/mapx, zero]])
+                               Nx[:, 3]/mapx[:, 0], zero, Nx[:, 4]/mapx[:, 0], zero, Nx[:, 5]/mapx[:, 0], zero]])
 
 
         else:
             raise ValueError('Not implemented yet')
 
+        # we rearrange the tensor so that it has a shape of (n gauss points, ndim, m)
         B = np.moveaxis(B, -1, 0)
         return B, j
 
     def element_coupling_matrix(self, alpha):
+
+        # chi, eta coordinates and weights of the gauss points
         xg, wg = self.gaussian_quadrature[2]
+
         B, j = self.B_strain_matrix(xg)
         N_i = self.N(xg)
 
@@ -209,6 +218,8 @@ class Triangle:
         return ceel
 
     def element_stress_field(self, stress_field):
+
+        # chi, eta coordinates and weights of the gauss points
         xg, wg = self.gaussian_quadrature[2]
         B, j = self.B_strain_matrix(xg)
         BT = np.moveaxis(B, -1, -2)
@@ -229,25 +240,35 @@ class Triangle:
         return s_el
 
     def project_element_stress(self, D, displacement):
+
+        # chi, eta coordinates and weights of the gauss points
         xg, wg = self.gaussian_quadrature[2]
+        N_i = self.N(xg)
+        B, j = self.B_strain_matrix(xg)
+
+        # we initially solve for the displacement
+        A = np.einsum('ijk, kl -> ij', B, displacement)
+        solve = np.einsum('ij, ki -> kj', D, A)
 
         if self.simultype == '2D':
-            N_i = self.N(xg)
-            B, j = self.B_strain_matrix(xg)
-
-            # we initially solve for the displacement
-            A = np.einsum('ijk, kl -> ij', B, displacement)
-            solve = np.einsum('ij, ki -> kj', D, A)
-
             # it is simpler for broadcasting to multiply j_i and wg_i together
             left = j * wg
-            f_el = np.sum(left[:, None, None] * np.einsum('ij, ik -> ijk', N_i, solve), axis=0)
+
+        elif self.simultype == 'axis':
+            # in the axissymmetric case we need to multiply by the jacobian and 2pi
+            mapx = self.mapX(xg)
+            left = 2 * np.pi * j * wg * mapx[:, 0]
+
         else:
             raise ValueError('Not implemented yet')
+
+        f_el = np.sum(left[:, None, None] * np.einsum('ij, ik -> ijk', N_i, solve), axis=0)
 
         return f_el
 
     def project_element_flux(self, K, head):
+
+        # chi, eta coordinates and weights of the gauss points
         xg, wg = self.gaussian_quadrature[2]
 
         if self.simultype == '2D':
@@ -306,11 +327,12 @@ class Segment:
 
         # j then has shape (n gauss points,)
         j = DN @ self.X
-        DNaDX = DN/j
+        DNaDX = DN/j[:, None]
 
         return DNaDX, j
 
     def mapX(self, x):
+
         return self.N(x) @ self.X
 
     def B_strain_matrix(self, x):
@@ -323,7 +345,7 @@ class Segment:
             raise ValueError('Not implemented yet')
 
     def neumann(self, f):
-        xg, wg = self.gaussian_quadrature[1]
+        xg, wg = self.gaussian_quadrature[2]
         DNaDX, j = self.gradN(xg)
         N = self.N(xg)
 
@@ -337,6 +359,6 @@ class Segment:
         else:
             raise ValueError('Not implemented yet')
 
-        fel = np.sum(left[:, None] * N * f, axis=0)
+        fel = np.sum(left[:, None] * N.T * f, axis=0)
 
         return fel

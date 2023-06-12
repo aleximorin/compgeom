@@ -7,15 +7,22 @@ import PoroElasticProperties as prop
 
 from scipy.sparse import linalg
 from scipy.sparse import lil_matrix
+import pygmsh
 
 from scipy.io import loadmat
 
 if __name__ == '__main__':
 
+    # we define the mesh
+    r = 1
+    boxL = 50 * r
+    cell_size = 0.02
+
     # problem geometry
     radius = 1
-    theta = np.linspace(0, np.pi/2, 10)
-    box_length = 50*radius
+    ntheta = 10
+    theta = np.linspace(0, np.pi / 2, ntheta)
+    box_length = 50 * radius
 
     vertices = np.vstack((np.cos(theta), np.sin(theta))).T
     other_vertices = np.array([[0, box_length],
@@ -23,16 +30,40 @@ if __name__ == '__main__':
                                [box_length, 0]])
     vertices = np.vstack((vertices, other_vertices))
 
-    edges = Mesher.build_edges(vertices)
-    mesh = Mesher.Mesh(vertices, edges, cell_size=10)
+    resolutions = 10 * np.ones(len(vertices))
+    resolutions[:ntheta] = 0.1
 
-    matmesh = loadmat('../../matlab_mesh.mat')
+    with pygmsh.geo.Geometry() as geom:
+        # we initiate an empty line list
+        lines = []
 
-    mesh.nodes = matmesh['nodes']
-    mesh.connectivity = matmesh['connectivity'] - 1
-    mesh.nn = len(mesh.nodes)
-    mesh.ne = len(mesh.connectivity)
-    mesh.id = np.zeros(mesh.ne).astype(int)
+        # we instantiate points p1 and p2 and make sure to store the first one in p0
+        p1 = p0 = geom.add_point(vertices[0], resolutions[0])
+
+        # at every iteration, we make a line going from p1 to p2
+        for i in range(len(vertices) - 1):
+            p2 = geom.add_point(vertices[i + 1], resolutions[i + 1])
+            line = geom.add_line(p1, p2)
+            lines.append(line)
+            p1 = p2  # we make sure that p1 becomes p2, the next point to be in lines
+
+        # we add the last line, closing the loop with p2 to p0
+        lines.append(geom.add_line(p2, p0))
+
+        # curve loop is a collection of lines where every endpoints are connected
+        loop = geom.add_curve_loop(lines)
+
+        # the plane surface is the area that is going to be partitionned in finite elements
+        surf = geom.add_plane_surface(loop)
+
+        out = geom.generate_mesh()
+
+    mesh = Mesher.Mesh(out, simultype='axis')
+    mesh = Mesher.tri3_2_tri6(mesh)
+    mesh.plot()
+    print(mesh.nn)
+    plt.xlim(-0.3, 10)
+    plt.ylim(-0.3, 10)
 
     # we get the boundaries needed to enforce boundary conditions
     left = np.argwhere(np.abs(mesh.nodes[:, 0] - mesh.nodes[:, 0].min()) <= 1e-4)[:, 0]

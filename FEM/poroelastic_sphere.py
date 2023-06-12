@@ -13,27 +13,42 @@ from scipy.io import loadmat
 if __name__ == '__main__':
     # we define the mesh
     r = 1
-    nrad = 80
-    theta = np.linspace(0, np.pi/2, nrad)
+    cell_size = 0.01
 
-    x = np.hstack(([0], np.cos(theta) * r))
-    y = np.hstack(([0], np.sin(theta) * r))
+    import pygmsh
 
-    vertices = np.vstack((x, y)).T
-    edges = Mesher.build_edges(vertices)
+    with pygmsh.geo.Geometry() as geom:
+        center = geom.add_point([0, 0], 10 * cell_size)
+        lower_right = geom.add_point([0, r], cell_size)
+        upper_left = geom.add_point([r, 0], cell_size)
 
-    mesh = Mesher.Mesh(vertices, edges, cell_size=1, simultype='axis')
+        bottom = geom.add_line(center, lower_right)
+        left = geom.add_line(upper_left, center)
+        arc = geom.add_circle_arc(lower_right, center, upper_left)
 
-    # ok but we take the matlab mesh lol
+        loop = geom.add_curve_loop([bottom, arc, left])
+        surface = geom.add_plane_surface(loop)
+        out = geom.generate_mesh()
+
+    mesh = Mesher.Mesh(out, simultype='axis')
+
+    from scipy.io import loadmat
 
     matmesh = loadmat('../../mesh.mat')
     mesh.nodes = matmesh['nodes']
     mesh.connectivity = matmesh['connectivity'] - 1
-    mesh.ne = len(mesh.connectivity)
     mesh.nn = len(mesh.nodes)
-    mesh.id = np.zeros(mesh.ne).astype(int)
+    mesh.ne = len(mesh.connectivity)
 
     mesh.plot()
+
+    #mesh = Mesher.tri3_2_tri6(mesh)
+
+    mesh.plot()
+    plt.xlabel('x')
+    plt.ylabel('y')
+    print(mesh.nn)
+    print(mesh.nodes.shape)
 
     # geomechanical parameters
     k = 8.4e3  # elastic drained bulk modulus [MPa]

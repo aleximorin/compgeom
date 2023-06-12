@@ -8,8 +8,6 @@ import Element
 
 import PoroElasticProperties as prop
 
-print('haha')
-
 
 def find_eltype(mesh):
     ne, nc = mesh.connectivity.shape
@@ -26,6 +24,7 @@ def assemble_stiffness_matrix(mesh, E, nu):
     g = prop.shear_modulus(E, nu)
 
     D = elastic_isotropic_stiffness(k, g, simultype=mesh.simultype)
+    ndofs = []
 
     for e in range(mesh.ne):
 
@@ -40,6 +39,7 @@ def assemble_stiffness_matrix(mesh, E, nu):
 
         K_el = elt.element_stiffness_matrix(D)
 
+        ndofs.append(n_dof)
         for i, ni in enumerate(n_dof):
             for j, nj in enumerate(n_dof):
                 K[ni, nj] += K_el[i, j]
@@ -91,19 +91,31 @@ def project_flux(mesh, K, head, M=None, return_M=False):
 
 
 def project_stress(mesh, E, nu, displacement, M=None, return_M=False):
+
+    # in case M was already computed, to see for example stress evolution over time
     if M is None:
         M = assemble_mass_matrix(mesh, 1.0)
 
+    if sparse.issparse(displacement):
+        displacement = displacement.toarray()
+
+    if len(displacement.shape) == 1:
+        displacement = displacement[:, None]
+
     eltype = find_eltype(mesh)
 
+    # geomechanical parameters
     k = prop.bulk_modulus(E, nu)
     g = prop.shear_modulus(E, nu)
     D = elastic_isotropic_stiffness(k, g, mesh.simultype)
 
+    # TODO: implement stress projection in axissymmetry
     if mesh.simultype == '2D':
         f = sparse.csc_matrix((3, mesh.nn))
+    elif mesh.simultype == 'axis':
+        f = sparse.csc_matrix((4, mesh.nn))
     else:
-        raise ValueError('Not implemented yet')
+        raise ValueError('Type not implemented yet')
 
     for e in range(mesh.ne):
 
@@ -114,13 +126,17 @@ def project_stress(mesh, E, nu, displacement, M=None, return_M=False):
         # we get the coordinates of the nodes
         X = mesh.nodes[n_e]
 
+        # we create an element containing the coordinates
         elt = Element.Triangle(X, eltype, mesh.simultype)
 
+        # we find the corresponding x and y displacements at the nodes
         elt_displacement = displacement[n_dof]
 
+        # we compute the force vector to project the stress at the centroid to the nodes
         f_el = elt.project_element_stress(D, elt_displacement)
         f[:, n_e] = f[:, n_e] + f_el.T
 
+    # we finally solve the projected gradients with the mass matrix
     f_out = np.zeros_like(f.toarray())
     for i in range(f.shape[0]):
         f_out[i] = linalg.spsolve(M, f[i].T)
@@ -156,6 +172,7 @@ def assemble_mass_matrix(mesh, rho):
     M = sparse.csc_matrix((mesh.nn, mesh.nn))
     eltype = find_eltype(mesh)
 
+    # we want to ensure the density to be accessible by the index corresponding to every element
     if np.isscalar(rho):
         rho = [rho]
 
@@ -244,19 +261,21 @@ def set_stress_field(mesh, stress_field, applied_elements=None):
 
     # we want to find nodes with applied stress
     if applied_elements is None:
-        applied_elements = np.arange(mesh.ne)
+        # if not specified, we apply the stress to the entire domain
+        applied_elements = np.arange(mesh.nn)
 
+    # we find the elements where every node has applied stress
     il = np.isin(mesh.connectivity, applied_elements)
-    elt_line = np.argwhere(il.sum(axis=1) == mesh.connectivity.shape[1])[:, 0]
+    elements = np.argwhere(il.sum(axis=1) == mesh.connectivity.shape[1])[:, 0]
 
-    for i, e in enumerate(elt_line):
+    for i, e in enumerate(elements):
 
         n_e = mesh.connectivity[e]
         n_dof = np.vstack([2*n_e, 2*n_e + 1]).reshape(-1, order='F')
         X = mesh.nodes[n_e]
 
-        elt = Element.Triangle(X, eltype, mesh.simultype)
-        S_el = elt.element_stress_field(stress_field)
+        elements = Element.Triangle(X, eltype, mesh.simultype)
+        S_el = elements.element_stress_field(stress_field)
         S[n_dof] += S_el
 
     return S

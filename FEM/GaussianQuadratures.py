@@ -38,12 +38,14 @@ _linear_segment_gaussian_quadrature = {1: (np.array([0]),
                                            np.array([2])),
                                        2: (np.array(
                                            [-1. / np.sqrt(3),
-                                            -1. / np.sqrt(3)]),
+                                            1. / np.sqrt(3)]),
                                            np.array([1, 1]))}
 
 
 _quadratic_segment_gaussian_quadrature = {1: (np.array([-np.sqrt(3/5), 0, np.sqrt(3/5)]),
-                                                       np.array([5/9, 8/9, 5/9]))}  # to be implemented
+                                                       np.array([5/9, 8/9, 5/9])),
+                                          2: (np.array([-0.861136, -0.339981, 0.339981, 0.861136]),
+                                              np.array([0.347855, 0.652145, 0.652145, 0.347855]))}
 
 # defining the dictionaries containing different shape functions for an element shape
 _triangle_gaussian_quadrature = {'linear': _linear_triangle_gaussian_quadrature,
