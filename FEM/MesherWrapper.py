@@ -27,6 +27,7 @@ def tri3_2_tri6(mesh3):
     # we use the np.unique() function to map every point to it's original position
     new_nodes, ic = np.unique(np.vstack((x1, x2, x3)), return_inverse=True, axis=0)
     ic += mesh3.nn
+
     # we now add them to the mesh6 object
     mesh6.nodes = np.vstack((mesh3.nodes, new_nodes))
     mesh6.connectivity = np.hstack((mesh3.connectivity, np.vstack((ic[:ne], ic[ne:2*ne], ic[2*ne:])).T))
@@ -39,7 +40,6 @@ class Mesh:
     def __init__(self, meshio_mesh, cell_type='triangle', simultype='2D'):
 
         self.cell_type = cell_type
-
         self._parse_mesh(meshio_mesh)
         self.simultype = simultype
 
@@ -89,60 +89,53 @@ class Mesh:
 
 if __name__ == '__main__':
 
-    # we define the mesh
+    # we will create a smiley face :)
 
-    cl = 0.1
+    # we need to import pygmsh
     import pygmsh
 
-    # bro nice face
+    # cl is the mesh resolution
+    cl = 0.1
+
     with pygmsh.geo.Geometry() as geom:
+        # the face and the eyes need to be defined as 'not a surface' as we will create a proper surface later on
+        # we create the face
         face = geom.add_circle([0.0, 0.0], 1, mesh_size=2 * cl, make_surface=False, compound=False)
+
+        # we add two eyes
         eye1 = geom.add_circle([-0.4, 0.25], 0.2, mesh_size=cl, make_surface=False, compound=False)
         eye2 = geom.add_circle([0.4, 0.25], 0.2, mesh_size=cl, make_surface=False, compound=False)
 
-        geom.add_physical(face)
-
+        # we create a mouth by defining two circle arcs
+        # left and right edge of the smile
         p1 = geom.add_point([0.7, -0.2], cl)
         p2 = geom.add_point([-0.7, -0.2], cl)
 
+        # centers of the lower and upper part of the mouth
         c1 = geom.add_point([0, 2], cl)
         c2 = geom.add_point([0, -0.1], cl)
 
+        # lower and upper part of the mouth
         m1 = geom.add_circle_arc(p1, c1, p2)
         m2 = geom.add_circle_arc(p2, c2, p1)
 
+        # we create a loop by linking those two curves
         mouth = geom.add_curve_loop([m1, m2])
 
+        # we can finally create the surface, not forgetting to add the holes
         surface = geom.add_plane_surface(face.curve_loop, holes=[eye1.curve_loop, eye2.curve_loop, mouth])
 
+        # don't forget to generate the mesh, 'out' is what the wrapper needs
         out = geom.generate_mesh(dim=2)
 
+    # we create the easily usable mesh object
     mesh = Mesh(out)
+
+    # we can plot the mesh with the plot() command
     mesh.plot()
+
+    # here we can also plot every nodes easily
     plt.scatter(*mesh.nodes.T, c='k', s=2)
+
+    # obligatory plt.show() call for matplotlib to open a window
     plt.show()
-
-    """import pygmsh
-    with pygmsh.geo.Geometry() as geom:
-        hole = geom.add_circle([0.4, 0.4], 0.1, mesh_size=cl, make_surface=False)
-        center = geom.add_point([0, 0], cl)
-        p1 = geom.add_point([1, 0], cl)
-        p2 = geom.add_point([0, 1], cl)
-        arc = geom.add_circle_arc(p1, center, p2)
-        bottom = geom.add_line(center, p1)
-        left = geom.add_line(p2, center)
-        loop = geom.add_curve_loop([bottom, arc, left])
-        surface = geom.add_plane_surface(loop, holes=[hole.curve_loop])
-        out = geom.generate_mesh(dim=2)
-
-    plt.triplot(*out.points[:, :2].T, out.cells_dict['triangle'], )
-    plt.gca().set_aspect(1)"""
-
-
-"""
-z = np.arange(mesh.nn)
-plt.tripcolor(*mesh.nodes.T, mesh.connectivity[:, :3], z, shading='flat')
-plt.triplot(*mesh.nodes.T, mesh.connectivity[:, :3], c='k', lw=0.5)
-plt.scatter(*mesh.nodes.T, c='k', s=2)
-plt.gca().set_aspect(1)
-"""

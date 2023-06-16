@@ -4,27 +4,31 @@ import os
 import numpy as np
 from scipy import sparse
 from scipy.sparse import linalg
-import Element
+import Elements as elem
 
 import PoroElasticProperties as prop
 
 
 def find_eltype(mesh):
+    # we can find the element type by looking at it's connectivity
+    # currently only works for triangle elements
+
     ne, nc = mesh.connectivity.shape
     eltype = 'linear' if nc == 3 else 'quadratic' if nc == 6 else 'undefined'
+
     return eltype
 
 
 def assemble_stiffness_matrix(mesh, E, nu):
 
+    # the stiffness matrix is of shape 2 * mesh.nn because of x and y displacement
     K = sparse.lil_matrix((2*mesh.nn, 2*mesh.nn))
     eltype = find_eltype(mesh)
 
+    # geomechanical properties
     k = prop.bulk_modulus(E, nu)
     g = prop.shear_modulus(E, nu)
-
     D = elastic_isotropic_stiffness(k, g, simultype=mesh.simultype)
-    ndofs = []
 
     for e in range(mesh.ne):
 
@@ -34,12 +38,9 @@ def assemble_stiffness_matrix(mesh, E, nu):
 
         # we get the coordinates of the nodes
         X = mesh.nodes[n_e]
-
-        elt = Element.Triangle(X, eltype, mesh.simultype)
-
+        elt = elem.Triangle(X, eltype, mesh.simultype)
         K_el = elt.element_stiffness_matrix(D)
 
-        ndofs.append(n_dof)
         for i, ni in enumerate(n_dof):
             for j, nj in enumerate(n_dof):
                 K[ni, nj] += K_el[i, j]
@@ -49,12 +50,15 @@ def assemble_stiffness_matrix(mesh, E, nu):
 
 def project_flux(mesh, K, head, M=None, return_M=False):
 
+    # in case the head vector is a scipy.sparse object, it is simpler to deal with ndarray
     if sparse.issparse(head):
         head = head.toarray()
 
+    # we want to be sure it is of shape (n, 1)
     if len(head.shape) == 1:
         head = head[:, None]
 
+    # we can reuse the M matrix for time derivatives
     if M is None:
         M = assemble_mass_matrix(mesh, 1.0)
 
@@ -63,6 +67,7 @@ def project_flux(mesh, K, head, M=None, return_M=False):
     if mesh.simultype == '2D':
         f = sparse.csc_matrix((2, mesh.nn))
     else:
+        # TODO: implement axissymmetry for this function
         raise ValueError('Not implemented yet')
 
     for e in range(mesh.ne):
@@ -72,9 +77,9 @@ def project_flux(mesh, K, head, M=None, return_M=False):
 
         # we get the coordinates of the nodes
         X = mesh.nodes[n_e]
+        elt = elem.Triangle(X, eltype, mesh.simultype)
 
-        elt = Element.Triangle(X, eltype, mesh.simultype)
-
+        # we access the solution for this element
         elt_head = head[n_e]
 
         f_el = elt.project_element_flux(K, elt_head)
@@ -109,7 +114,6 @@ def project_stress(mesh, E, nu, displacement, M=None, return_M=False):
     g = prop.shear_modulus(E, nu)
     D = elastic_isotropic_stiffness(k, g, mesh.simultype)
 
-    # TODO: implement stress projection in axissymmetry
     if mesh.simultype == '2D':
         f = sparse.csc_matrix((3, mesh.nn))
     elif mesh.simultype == 'axis':
@@ -127,7 +131,7 @@ def project_stress(mesh, E, nu, displacement, M=None, return_M=False):
         X = mesh.nodes[n_e]
 
         # we create an element containing the coordinates
-        elt = Element.Triangle(X, eltype, mesh.simultype)
+        elt = elem.Triangle(X, eltype, mesh.simultype)
 
         # we find the corresponding x and y displacements at the nodes
         elt_displacement = displacement[n_dof]
@@ -163,7 +167,7 @@ def elastic_isotropic_stiffness(k, g, simultype='2D'):
                       [Lb, Lb, 0, La]])
 
     else:
-        raise ValueError('Type not implemented yet')
+        raise ValueError('Simulation type not implemented yet')
 
     return D
 
@@ -188,7 +192,7 @@ def assemble_mass_matrix(mesh, rho):
         mat_id = mesh.id[e]
         rho_e = rho[mat_id]
 
-        elt = Element.Triangle(X, eltype, mesh.simultype)
+        elt = elem.Triangle(X, eltype, mesh.simultype)
         M_el = elt.element_mass_matrix(rho_e)
 
         for i, ni in enumerate(n_e):
@@ -219,7 +223,7 @@ def assemble_conductivity_matrix(mesh, cond):
         mat_id = mesh.id[e]
         cond_e = cond[mat_id]
 
-        elt = Element.Triangle(X, eltype, mesh.simultype)
+        elt = elem.Triangle(X, eltype, mesh.simultype)
         C_el = elt.element_conductivity_matrix(cond_e)
 
         for i, ni in enumerate(n_e):
@@ -243,7 +247,7 @@ def assemble_coupling_matrix(mesh, alpha):
         # we get the coordinates of the nodes
         X = mesh.nodes[n_e]
 
-        elt = Element.Triangle(X, eltype, mesh.simultype)
+        elt = elem.Triangle(X, eltype, mesh.simultype)
 
         ceel = elt.element_coupling_matrix(alpha)
 
@@ -274,7 +278,7 @@ def set_stress_field(mesh, stress_field, applied_elements=None):
         n_dof = np.vstack([2*n_e, 2*n_e + 1]).reshape(-1, order='F')
         X = mesh.nodes[n_e]
 
-        elements = Element.Triangle(X, eltype, mesh.simultype)
+        elements = elem.Triangle(X, eltype, mesh.simultype)
         S_el = elements.element_stress_field(stress_field)
         S[n_dof] += S_el
 
@@ -287,8 +291,16 @@ def assemble_tractions_over_line(mesh, node_list, traction):
 
     il = np.isin(mesh.connectivity, node_list)
 
-    n = 2 if eltype == 'linear' else 3
-    elt_line = np.argwhere(il.sum(axis=1) == n)[:, 0]  # won't work with quadratic triangle elements, change 2
+    # we want to find the number of nodes lying on one side of every (triangle) element
+    if eltype == 'linear':
+        n = 2
+    elif eltype == 'quadratic':
+        n = 3
+    else:
+        raise ValueError('Not implemented yet')
+
+    # elements on a line
+    elt_line = np.argwhere(il.sum(axis=1) == n)[:, 0]
 
     f = np.zeros(2*mesh.nn)
 
@@ -304,8 +316,8 @@ def assemble_tractions_over_line(mesh, node_list, traction):
         seg_xi, seg_yi = np.argsort(X, axis=0).T
         segx, segy = X[seg_xi, 0], X[seg_yi, 1]
 
-        elt_x = Element.Segment(segx, eltype=eltype, simultype=mesh.simultype)
-        elt_y = Element.Segment(segy, eltype=eltype, simultype=mesh.simultype)
+        elt_x = elem.Segment(segx, eltype=eltype, simultype=mesh.simultype)
+        elt_y = elem.Segment(segy, eltype=eltype, simultype=mesh.simultype)
 
         # problem here with neumann and the shape of the segment element
         fs = elt_y.neumann(traction[0])

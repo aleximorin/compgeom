@@ -40,7 +40,9 @@ class Triangle:
         return n
 
     def gradN(self, x):
-        # gradient of the shape function
+
+        # we compute the gradient of the shape function
+        # we need the gauss points in case the element is quadratic
 
         if self.eltype == 'linear':
             DnaDxi = np.array([[-1, 1, 0],
@@ -74,38 +76,42 @@ class Triangle:
         DNaDX, j = self.gradN(xg)
         DNaDXT = np.moveaxis(DNaDX, -1, -2)
 
+        # scale is a scaling factor for every gauss points
         if self.simultype == '2D':
-            left = (wg * j * cond)
+            scale = (wg * j * cond)
 
         elif self.simultype == 'axis':
             mapx = self.mapX(xg)
-            left = (2 * np.pi * wg * j * cond * mapx[:, 0])
+            scale = (2 * np.pi * wg * j * cond * mapx[:, 0])
 
         else:
             raise ValueError('Not implemented yet')
 
         # A is (n gauss points, n el, n el)
         A = np.einsum('ijk, ikl -> ijl', DNaDXT, DNaDX)
-        kel = np.sum(left[:, None, None] * A, axis=0)
+        kel = np.sum(scale[:, None, None] * A, axis=0)
 
         return kel
 
     def element_stiffness_matrix(self, D):
         xg, wg = self.gaussian_quadrature[1]
         B, j = self.B_strain_matrix(xg)
+
+        # we transpose the B matrix for every gauss point
         BT = np.moveaxis(B, -1, -2)
 
+        # scale is a scaling factor for every gauss points
         if self.simultype == '2D':
-            left = wg * j
+            scale = wg * j
 
         elif self.simultype == 'axis':
             mapx = self.mapX(xg)[:, 0] # we only take the x component
-            left = 2 * np.pi * mapx * wg * j
+            scale = 2 * np.pi * mapx * wg * j
 
         else:
             raise ValueError('Not implemented yet')
 
-        kel = np.sum(left[:, None, None] * BT @ D @ B, axis=0)
+        kel = np.sum(scale[:, None, None] * BT @ D @ B, axis=0)
         return kel
 
     def element_mass_matrix(self, rho):
@@ -116,20 +122,20 @@ class Triangle:
         N_i = self.N(xg)
         DnaDx, j = self.gradN(xg)
 
-        # left is a scaling factor with respect to the gauss points
+        # scale is a scaling factor with respect to the gauss points
         if self.simultype == '2D':
-            left = (wg * j * rho)
+            scale = (wg * j * rho)
 
         elif self.simultype == 'axis':
             mapx = self.mapX(xg)
-            left = 2 * np.pi * wg * j * rho * mapx[:, 0]
+            scale = 2 * np.pi * wg * j * rho * mapx[:, 0]
 
         else:
             raise ValueError('Not implemented yet')
 
         # we do the integration for every gauss point at the same time with vectorization
         A = np.einsum('ij, ik -> ijk', N_i, N_i)
-        kel = np.sum(left[:, None, None] * A, axis=0)
+        kel = np.sum(scale[:, None, None] * A, axis=0)
 
         return kel
 
@@ -143,7 +149,7 @@ class Triangle:
 
         if self.simultype == '2D':
 
-            # in 2d, we have a tensor with respect to sigma_xx, sigma_yy and tau_xy
+            # in 2D, we have a tensor with respect to sigma_xx, sigma_yy and tau_xy
             if self.eltype == 'linear':
                 # 3 x 6 matrix
                 B = np.array([[DnaDx[:, 0, 0], zero, DnaDx[:, 0, 1], zero, DnaDx[:, 0, 2], zero],
@@ -200,42 +206,46 @@ class Triangle:
         B, j = self.B_strain_matrix(xg)
         N_i = self.N(xg)
 
+        # scale is a scaling factor for every gauss points
         if self.simultype == '2D':
             Baux = B[:, 0] + B[:, 1]
-            left = wg * j * alpha
+            scale = wg * j * alpha
 
         elif self.simultype == 'axis':
             Baux = B[:, 0] + B[:, 1] + B[:, -1]
             mapx = self.mapX(xg)
-            left = 2 * np.pi * wg * j *alpha * mapx[:, 0]
+            scale = 2 * np.pi * wg * j *alpha * mapx[:, 0]
 
         else:
             raise ValueError('Not implemented yet')
 
         A = np.einsum('ij, ik -> ijk', Baux, N_i)
-        ceel = np.sum(left[:, None, None] * A, axis=0)
+        ce_el = np.sum(scale[:, None, None] * A, axis=0)
 
-        return ceel
+        return ce_el
 
     def element_stress_field(self, stress_field):
 
         # chi, eta coordinates and weights of the gauss points
         xg, wg = self.gaussian_quadrature[2]
         B, j = self.B_strain_matrix(xg)
+
+        # we transpose the B matrix for every gauss point
         BT = np.moveaxis(B, -1, -2)
 
+        # scale is a scaling factor for every gauss points
         if self.simultype == '2D':
-            left = j * wg
+            scale = j * wg
 
         elif self.simultype == 'axis':
             mapx = self.mapX(xg)
-            left = 2 * np.pi * j * wg * mapx[:, 0]
+            scale = 2 * np.pi * j * wg * mapx[:, 0]
 
         else:
             raise ValueError('Not implemented yet')
 
         A = BT @ stress_field
-        s_el = left @ A
+        s_el = scale @ A
 
         return s_el
 
@@ -250,19 +260,20 @@ class Triangle:
         A = np.einsum('ijk, kl -> ij', B, displacement)
         solve = np.einsum('ij, ki -> kj', D, A)
 
+        # we transpose the B matrix for every gauss point
         if self.simultype == '2D':
             # it is simpler for broadcasting to multiply j_i and wg_i together
-            left = j * wg
+            scale = j * wg
 
         elif self.simultype == 'axis':
             # in the axissymmetric case we need to multiply by the jacobian and 2pi
             mapx = self.mapX(xg)
-            left = 2 * np.pi * j * wg * mapx[:, 0]
+            scale = 2 * np.pi * j * wg * mapx[:, 0]
 
         else:
             raise ValueError('Not implemented yet')
 
-        f_el = np.sum(left[:, None, None] * np.einsum('ij, ik -> ijk', N_i, solve), axis=0)
+        f_el = np.sum(scale[:, None, None] * np.einsum('ij, ik -> ijk', N_i, solve), axis=0)
 
         return f_el
 
@@ -271,11 +282,12 @@ class Triangle:
         # chi, eta coordinates and weights of the gauss points
         xg, wg = self.gaussian_quadrature[2]
 
+        # we transpose the B matrix for every gauss point
         if self.simultype == '2D':
             N_i = self.N(xg)
             DNaDx, j = self.gradN(xg)
             solve = - K * np.einsum('ijk, kl -> ij', DNaDx, head)
-            left = j * wg
+            scale = j * wg
 
         elif self.simultype == 'axis':
             raise ValueError('Not implemented yet')
@@ -283,7 +295,7 @@ class Triangle:
         else:
             raise ValueError('Not implemented yet')
 
-        f_el = np.sum(left[:, None, None] * np.einsum('ij, ik -> ijk', N_i, solve), axis=0)
+        f_el = np.sum(scale[:, None, None] * np.einsum('ij, ik -> ijk', N_i, solve), axis=0)
 
         return f_el
 
@@ -301,7 +313,7 @@ class Segment:
 
     def N(self, x):
         # x must be of shape (n points, n dimensions)
-        # for example x of shape (10, 2) means that it contains ten 2d points
+        # for example x of shape (10, 2) means that it contains ten 2D points
 
         if self.eltype == 'linear':
             n = np.array([0.5*(1 - x), 0.5*(1 + x)]).T
@@ -332,7 +344,6 @@ class Segment:
         return DNaDX, j
 
     def mapX(self, x):
-
         return self.N(x) @ self.X
 
     def B_strain_matrix(self, x):
