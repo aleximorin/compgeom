@@ -11,3 +11,11 @@ Most of the python code relies on a [simple anaconda distribution](https://docs.
 You also can install everything needed at once for an empty environment with the command
 
 ``pip install -r requirements.txt``
+
+Everything is separated between two main folders:
+
+- FEM
+  - Contains every important .py files with the functions necessary for running the Finite Element Modelling codes.
+- Notebooks
+  - Contains every exercise related to the course.
+  
