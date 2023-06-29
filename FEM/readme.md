@@ -7,6 +7,6 @@ Here every .py file contains important functions related to the Finite Element M
 - MatrixAssembly.py
   - Contains the functions related to finite element matrices assembly. Most functions take in a Mesh object and geomechanical properties.
 - MesherWrapper.py
- - Functions wrapping the use of pygmsh and easing access to important stuff, such as node coordinates and connectivity. Everything is contained into a neat Mesh object with easy matplotlib plotting.
+  - Functions wrapping the use of pygmsh and easing access to important stuff, such as node coordinates and connectivity. Everything is contained into a neat Mesh object with easy matplotlib plotting.
 - PoroElasticProperties.py
   - Simple functions linking geomechanical properties.
